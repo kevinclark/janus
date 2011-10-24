@@ -1,4 +1,3 @@
-
 if has("gui_macvim")
   " Fullscreen takes up entire screen
   set fuoptions=maxhorz,maxvert
@@ -19,6 +18,8 @@ if has("gui_macvim")
 
   " Command-/ to toggle comments
   map <D-/> <plug>NERDCommenterToggle<CR>
+  imap <D-/> <Esc><plug>NERDCommenterToggle<CR>i
+
 
   " Command-][ to increase/decrease indentation
   vmap <D-]> >gv
@@ -45,7 +46,24 @@ if has("gui_macvim")
   imap <D-8> <Esc>8gt
   map  <D-9> 9gt
   imap <D-9> <Esc>9gt
+
+  " Command-Option-ArrowKey to switch viewports
+  map <D-M-Up> <C-w>k
+  imap <D-M-Up> <Esc> <C-w>k
+  map <D-M-Down> <C-w>j
+  imap <D-M-Down> <Esc> <C-w>j
+  map <D-M-Right> <C-w>l
+  imap <D-M-Right> <Esc> <C-w>l
+  map <D-M-Left> <C-w>h
+  imap <D-M-Left> <C-w>h
+
+  " Adjust viewports to the same size
+  map <Leader>= <C-w>=
+  imap <Leader>= <Esc> <C-w>=
 endif
+
+" Don't beep
+set visualbell
 
 " Start without the toolbar
 set guioptions-=T
@@ -60,9 +78,11 @@ function StartTerm()
 endfunction
 
 " Project Tree
-autocmd VimEnter * call s:CdIfDirectory(expand("<amatch>"))
-autocmd FocusGained * call s:UpdateNERDTree()
-autocmd WinEnter * call s:CloseIfOnlyNerdTreeLeft()
+if exists("loaded_nerd_tree")
+  autocmd VimEnter * call s:CdIfDirectory(expand("<amatch>"))
+  autocmd FocusGained * call s:UpdateNERDTree()
+  autocmd WinEnter * call s:CloseIfOnlyNerdTreeLeft()
+endif
 
 " Close all open buffers on entering a window if the only
 " buffer that's left is the NERDTree buffer
@@ -83,6 +103,12 @@ function s:CdIfDirectory(directory)
 
   if explicitDirectory
     exe "cd " . fnameescape(a:directory)
+  endif
+
+  " Allows reading from stdin
+  " ex: git diff | mvim -R -
+  if strlen(a:directory) == 0 
+    return
   endif
 
   if directory
@@ -188,17 +214,19 @@ ruby << RUBY
   home        = pwd == File.expand_path("~")
 
   if home || Regexp.new("^" + Regexp.escape(pwd)) !~ destination
-    VIM.command(%{call ChangeDirectory(system("dirname " . shellescape(a:file, 1)), 0)})
+    VIM.command(%{call ChangeDirectory(fnamemodify(a:file, ":h"), 0)})
   end
 RUBY
 endfunction
 
 " Define the NERDTree-aware aliases
-call s:DefineCommand("cd", "ChangeDirectory")
-call s:DefineCommand("touch", "Touch")
-call s:DefineCommand("rm", "Remove")
-call s:DefineCommand("e", "Edit")
-call s:DefineCommand("mkdir", "Mkdir")
+if exists("loaded_nerd_tree")
+  call s:DefineCommand("cd", "ChangeDirectory")
+  call s:DefineCommand("touch", "Touch")
+  call s:DefineCommand("rm", "Remove")
+  call s:DefineCommand("e", "Edit")
+  call s:DefineCommand("mkdir", "Mkdir")
+endif
 
 " Include user's local vim config
 if filereadable(expand("~/.gvimrc.local"))
